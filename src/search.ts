@@ -36,6 +36,31 @@ const SMALL_KANA_MAP: Record<string, string> = {
   ゎ: 'わ',
 }
 
+function normalizeLatin(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
+function stripLongVowels(value: string): string {
+  // Accept omitted long vowels in romaji (e.g. rizaadon -> rizadon).
+  return value.replace(/([aeiou])\1+/g, '$1')
+}
+
+function romajiToleranceVariants(value: string): string[] {
+  const base = normalizeLatin(value)
+  if (!base) return []
+
+  const variants = new Set<string>([base])
+
+  // Treat ca/co/cu as ka/ko/ku (but do not rewrite ce/ci).
+  variants.add(base.replace(/ca/g, 'ka').replace(/co/g, 'ko').replace(/cu/g, 'ku'))
+
+  for (const current of [...variants]) {
+    variants.add(stripLongVowels(current))
+  }
+
+  return [...variants]
+}
+
 function normalizeKanaText(value: string): string {
   const hiragana = wanakana.toHiragana(value)
   let out = ''
@@ -61,11 +86,18 @@ function normalizedVariants(value: string): string[] {
   const variants = new Set<string>([base])
 
   if (/[a-z]/i.test(value)) {
-    variants.add(normalize(wanakana.toKana(value)))
+    for (const romaji of romajiToleranceVariants(value)) {
+      variants.add(normalize(romaji))
+      variants.add(normalize(wanakana.toKana(romaji)))
+    }
   }
 
   if (JP_CHAR_RE.test(value)) {
-    variants.add(normalize(wanakana.toRomaji(value)))
+    const romaji = wanakana.toRomaji(value)
+    variants.add(normalize(romaji))
+    for (const tolerant of romajiToleranceVariants(romaji)) {
+      variants.add(normalize(tolerant))
+    }
   }
 
   return [...variants]
