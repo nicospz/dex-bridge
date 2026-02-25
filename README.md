@@ -30,11 +30,12 @@ Entry shape:
   "en": "Pikachu",
   "ja": "ピカチュウ",
   "roomaji": "Pikachu",
-  "aliases": ["Pika"]
+  "aliases": ["Pika"],
+  "types": ["electric"]
 }
 ```
 
-`roomaji` and `aliases` are optional.
+`roomaji`, `aliases`, and `types` are optional.
 
 ## Run Locally
 
@@ -65,6 +66,7 @@ Each result row shows:
 - dex number (`#<dex>`)
 - English name
 - Japanese name
+- type pills (when available)
 - roomaji (smaller text, when present)
 
 Clicking a result copies:
