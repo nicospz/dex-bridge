@@ -53,6 +53,9 @@ function romajiToleranceVariants(value: string): string[] {
 
   // Treat ca/co/cu as ka/ko/ku (but do not rewrite ce/ci).
   variants.add(base.replace(/ca/g, 'ka').replace(/co/g, 'ko').replace(/cu/g, 'ku'))
+  // Treat l and r as equivalent in romaji matching.
+  variants.add(base.replace(/l/g, 'r'))
+  variants.add(base.replace(/r/g, 'l'))
 
   for (const current of [...variants]) {
     variants.add(stripLongVowels(current))
@@ -87,6 +90,8 @@ function normalizedVariants(value: string): string[] {
 
   if (/[a-z]/i.test(value)) {
     for (const romaji of romajiToleranceVariants(value)) {
+      // Keep latin-normalized variants so short partial latin input still matches.
+      variants.add(romaji)
       variants.add(normalize(romaji))
       variants.add(normalize(wanakana.toKana(romaji)))
     }
@@ -96,6 +101,7 @@ function normalizedVariants(value: string): string[] {
     const romaji = wanakana.toRomaji(value)
     variants.add(normalize(romaji))
     for (const tolerant of romajiToleranceVariants(romaji)) {
+      variants.add(normalizeLatin(tolerant))
       variants.add(normalize(tolerant))
     }
   }
@@ -196,12 +202,14 @@ function detectFromMap(
   matchedDex: Set<number>,
   output: DexEntry[],
 ): void {
-  const key = normalize(token)
-  if (!key) return
-  const entry = map.get(key)
-  if (!entry || matchedDex.has(entry.dex)) return
-  matchedDex.add(entry.dex)
-  output.push(entry)
+  const keys = normalizedVariants(token)
+  for (const key of keys) {
+    const entry = map.get(key)
+    if (!entry || matchedDex.has(entry.dex)) continue
+    matchedDex.add(entry.dex)
+    output.push(entry)
+    return
+  }
 }
 
 export function isPasteMode(input: string): boolean {
