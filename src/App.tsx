@@ -75,15 +75,11 @@ function toRomanNumeral(value: number): string {
   return out
 }
 
-function evolutionForEntry(entry: DexEntry): number[] {
-  if (entry.evolution?.length) return entry.evolution
-  return [entry.dex]
-}
-
 function withEvolutionChainResults(
   seed: DexEntry[],
   query: string,
   entryByDex: Map<number, DexEntry>,
+  relatedDexByDex: Map<number, number[]>,
   limit: number,
 ): DexEntry[] {
   if (!query.trim()) return seed.slice(0, limit)
@@ -100,7 +96,8 @@ function withEvolutionChainResults(
   for (const entry of seed) {
     if (expanded.length >= limit) break
     push(entry)
-    for (const evoDex of evolutionForEntry(entry)) {
+    const relatedDex = relatedDexByDex.get(entry.dex) ?? [entry.dex]
+    for (const evoDex of relatedDex) {
       push(entryByDex.get(evoDex))
     }
   }
@@ -114,6 +111,25 @@ export default function App(): JSX.Element {
     () => new Map(ENTRIES.map((entry) => [entry.dex, entry])),
     [],
   )
+  const relatedDexByDex = useMemo(() => {
+    const byDex = new Map<number, Set<number>>()
+
+    for (const entry of ENTRIES) {
+      const chain = entry.evolution?.length ? entry.evolution : [entry.dex]
+      for (const member of chain) {
+        const current = byDex.get(member) ?? new Set<number>([member])
+        for (const related of chain) current.add(related)
+        byDex.set(member, current)
+      }
+    }
+
+    return new Map(
+      [...byDex.entries()].map(([dex, values]) => [
+        dex,
+        [...values].sort((a, b) => a - b),
+      ]),
+    )
+  }, [])
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [query, setQuery] = useState('')
@@ -145,8 +161,14 @@ export default function App(): JSX.Element {
       merged.push(item)
     }
 
-    return withEvolutionChainResults(merged, query, entryByDex, MAX_RESULTS)
-  }, [indexes, query, entryByDex])
+    return withEvolutionChainResults(
+      merged,
+      query,
+      entryByDex,
+      relatedDexByDex,
+      MAX_RESULTS,
+    )
+  }, [indexes, query, entryByDex, relatedDexByDex])
 
   async function copyResult(entry: DexEntry): Promise<void> {
     const text = `${formatDex(entry.dex)} ${entry.en} / ${entry.ja}`
