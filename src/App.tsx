@@ -117,7 +117,6 @@ export default function App(): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [query, setQuery] = useState('')
-  const [fuzzyEnabled, setFuzzyEnabled] = useState(false)
   const [toast, setToast] = useState(false)
 
   const pasteMode = isPasteMode(query)
@@ -133,7 +132,7 @@ export default function App(): JSX.Element {
 
   const results = useMemo(() => {
     const direct = fastSearch(indexes, query, MAX_RESULTS)
-    if (direct.length >= 5 && !fuzzyEnabled) return direct
+    if (direct.length >= 5) return direct
 
     const fuzzy = fuzzySearch(indexes, query, MAX_RESULTS)
     const merged = [...direct]
@@ -147,7 +146,7 @@ export default function App(): JSX.Element {
     }
 
     return withEvolutionChainResults(merged, query, entryByDex, MAX_RESULTS)
-  }, [indexes, query, fuzzyEnabled, entryByDex])
+  }, [indexes, query, entryByDex])
 
   async function copyResult(entry: DexEntry): Promise<void> {
     const text = `${formatDex(entry.dex)} ${entry.en} / ${entry.ja}`
@@ -180,15 +179,6 @@ export default function App(): JSX.Element {
             placeholder="Search EN / 日本語 / romaji or paste text"
             aria-label="Search Pokemon"
           />
-
-          <label className="fuzzy-toggle">
-            <input
-              type="checkbox"
-              checked={fuzzyEnabled}
-              onChange={(e) => setFuzzyEnabled(e.target.checked)}
-            />
-            Fuzzy
-          </label>
         </div>
 
         <p className="stats">
