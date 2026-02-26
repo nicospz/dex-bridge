@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import dexData from './data/dex.json'
 import type { DexEntry } from './types'
 import {
@@ -79,10 +79,6 @@ function evolutionForEntry(entry: DexEntry): number[] {
   return [entry.dex]
 }
 
-function chainText(values: string[]): string {
-  return values.join(' → ')
-}
-
 function withEvolutionChainResults(
   seed: DexEntry[],
   query: string,
@@ -119,7 +115,6 @@ export default function App(): JSX.Element {
   const [query, setQuery] = useState('')
   const [fuzzyEnabled, setFuzzyEnabled] = useState(false)
   const [toast, setToast] = useState(false)
-  const [evolutionTarget, setEvolutionTarget] = useState<DexEntry | null>(null)
 
   const pasteMode = isPasteMode(query)
 
@@ -146,17 +141,6 @@ export default function App(): JSX.Element {
     return withEvolutionChainResults(merged, query, entryByDex, MAX_RESULTS)
   }, [indexes, query, fuzzyEnabled, entryByDex])
 
-  useEffect(() => {
-    if (!evolutionTarget) return
-
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') setEvolutionTarget(null)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [evolutionTarget])
-
   async function copyResult(entry: DexEntry): Promise<void> {
     const text = `${formatDex(entry.dex)} ${entry.en} / ${entry.ja}`
 
@@ -168,12 +152,6 @@ export default function App(): JSX.Element {
       setToast(false)
     }
   }
-
-  const evolutionDexChain = evolutionTarget ? evolutionForEntry(evolutionTarget) : null
-  const evolutionNameChainEn =
-    evolutionDexChain?.map((dex) => entryByDex.get(dex)?.en ?? formatDex(dex)) ?? []
-  const evolutionNameChainJa =
-    evolutionDexChain?.map((dex) => entryByDex.get(dex)?.ja ?? formatDex(dex)) ?? []
 
   return (
     <main className="app">
@@ -240,38 +218,33 @@ export default function App(): JSX.Element {
                       <span className="dex">{formatDex(entry.dex)}</span>
                       <span className="en">{entry.en}</span>
                       <span className="ja">{entry.ja}</span>
-                      {entry.generation && (
-                        <span className="generation">Gen {toRomanNumeral(entry.generation)}</span>
-                      )}
                     </span>
                     {entry.roomaji && <span className="roomaji">{entry.roomaji}</span>}
-                    {entry.types && entry.types.length > 0 && (
-                      <span className="type-pills" aria-label="Pokemon types">
-                        {entry.types.map((type) => (
-                          <span
-                            key={`${entry.dex}-${type}`}
-                            className="type-pill"
-                            style={{
-                              backgroundColor: TYPE_COLORS[type] ?? '#64748b',
-                            }}
-                          >
-                            {toTypeLabel(type)}
+                    {(entry.generation || (entry.types && entry.types.length > 0)) && (
+                      <span className="tags-row">
+                        {entry.generation && (
+                          <span className="generation">Gen {toRomanNumeral(entry.generation)}</span>
+                        )}
+                        {entry.types && entry.types.length > 0 && (
+                          <span className="type-pills" aria-label="Pokemon types">
+                            {entry.types.map((type) => (
+                              <span
+                                key={`${entry.dex}-${type}`}
+                                className="type-pill"
+                                style={{
+                                  backgroundColor: TYPE_COLORS[type] ?? '#64748b',
+                                }}
+                              >
+                                {toTypeLabel(type)}
+                              </span>
+                            ))}
                           </span>
-                        ))}
+                        )}
                       </span>
                     )}
                   </span>
                 </a>
                 <div className="card-actions">
-                  <button
-                    type="button"
-                    className="evo-btn"
-                    aria-label={`Show evolution chain for ${entry.en}`}
-                    title="Evolution"
-                    onClick={() => setEvolutionTarget(entry)}
-                  >
-                    Evo
-                  </button>
                   <button
                     type="button"
                     className="copy-btn"
@@ -290,44 +263,6 @@ export default function App(): JSX.Element {
           ))}
         </ul>
       </section>
-
-      {evolutionTarget && evolutionDexChain && (
-        <div className="modal-backdrop" onClick={() => setEvolutionTarget(null)} role="presentation">
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Evolution chain for ${evolutionTarget.en}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="modal-header">
-              <h2>Evolution Chain Peek</h2>
-              <button
-                type="button"
-                className="modal-close"
-                aria-label="Close evolution modal"
-                onClick={() => setEvolutionTarget(null)}
-              >
-                ✕
-              </button>
-            </header>
-            <p className="modal-focus">
-              {formatDex(evolutionTarget.dex)} {evolutionTarget.en}
-            </p>
-            <div className="chain-block">
-              <p className="chain-label">English</p>
-              <p className="chain-text">{chainText(evolutionNameChainEn)}</p>
-            </div>
-            <div className="chain-block">
-              <p className="chain-label">Japanese</p>
-              <p className="chain-text">{chainText(evolutionNameChainJa)}</p>
-            </div>
-            {!evolutionTarget.evolution?.length && (
-              <p className="chain-note">No full chain metadata in this dataset yet for this entry.</p>
-            )}
-          </section>
-        </div>
-      )}
 
       {toast && <div className="toast">Copied</div>}
     </main>
