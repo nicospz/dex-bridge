@@ -1,7 +1,7 @@
 // One-time script to generate dex.json from PokéAPI
 // Run with: node scripts/build-dex.js
 
-import fs from 'fs/promises'
+import fs from 'node:fs/promises'
 
 const OUTPUT = './src/data/dex.json'
 const BASE = 'https://pokeapi.co/api/v2'
@@ -75,7 +75,9 @@ function buildEvolutionBySpecies(chain, speciesNameToEntry) {
   const evolutionBySpecies = new Map()
 
   for (const path of paths) {
-    const present = path.map((slug) => speciesNameToEntry.get(slug)).filter(Boolean)
+    const present = path
+      .map((slug) => speciesNameToEntry.get(slug))
+      .filter(Boolean)
     if (present.length <= 1) continue
 
     const evolution = present.map((entry) => entry.dex)
@@ -96,7 +98,10 @@ async function main() {
 
   for (let id = 1; id <= MAX_ID; id++) {
     try {
-      const [species, pokemon] = await Promise.all([fetchSpecies(id), fetchPokemon(id)])
+      const [species, pokemon] = await Promise.all([
+        fetchSpecies(id),
+        fetchPokemon(id),
+      ])
       if (!species || !pokemon) continue
 
       const en = pickName(species.names, 'en')
@@ -122,7 +127,9 @@ async function main() {
     }
   }
 
-  const speciesNameToEntry = new Map(baseEntries.map((entry) => [entry.speciesSlug, entry]))
+  const speciesNameToEntry = new Map(
+    baseEntries.map((entry) => [entry.speciesSlug, entry]),
+  )
   const chainCache = new Map()
 
   for (const entry of baseEntries) {

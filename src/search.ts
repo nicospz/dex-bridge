@@ -21,7 +21,8 @@ type SearchIndexes = {
 const JP_CHAR_RE = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー]/u
 const JP_RUN_RE = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー]+/gu
 const LATIN_RUN_RE = /[A-Za-z]+/g
-const TOKEN_SPLIT_RE = /[^\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}A-Za-z0-9]+/u
+const TOKEN_SPLIT_RE =
+  /[^\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}A-Za-z0-9]+/u
 
 const SMALL_KANA_MAP: Record<string, string> = {
   ぁ: 'あ',
@@ -37,7 +38,10 @@ const SMALL_KANA_MAP: Record<string, string> = {
 }
 
 function normalizeLatin(value: string): string {
-  return value.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
 }
 
 function stripLongVowels(value: string): string {
@@ -52,7 +56,9 @@ function romajiToleranceVariants(value: string): string[] {
   const variants = new Set<string>([base])
 
   // Treat ca/co/cu as ka/ko/ku (but do not rewrite ce/ci).
-  variants.add(base.replace(/ca/g, 'ka').replace(/co/g, 'ko').replace(/cu/g, 'ku'))
+  variants.add(
+    base.replace(/ca/g, 'ka').replace(/co/g, 'ko').replace(/cu/g, 'ku'),
+  )
   // Treat l and r as equivalent in romaji matching.
   variants.add(base.replace(/l/g, 'r'))
   variants.add(base.replace(/r/g, 'l'))
@@ -125,15 +131,20 @@ export function createIndexes(entries: DexEntry[]): SearchIndexes {
   const aliasMap = new Map<string, DexEntry>()
 
   for (const entry of entries) {
-    const values = [entry.en, entry.ja, entry.roomaji ?? '', ...(entry.aliases ?? [])]
-      .flatMap((v) => normalizedVariants(v))
+    const values = [
+      entry.en,
+      entry.ja,
+      entry.roomaji ?? '',
+      ...(entry.aliases ?? []),
+    ].flatMap((v) => normalizedVariants(v))
 
     prepared.push({ entry, values })
 
     for (const key of normalizedVariants(entry.en)) enMap.set(key, entry)
     for (const key of normalizedVariants(entry.ja)) jaMap.set(key, entry)
     if (entry.roomaji) {
-      for (const key of normalizedVariants(entry.roomaji)) roomajiMap.set(key, entry)
+      for (const key of normalizedVariants(entry.roomaji))
+        roomajiMap.set(key, entry)
     }
     for (const alias of entry.aliases ?? []) {
       for (const key of normalizedVariants(alias)) aliasMap.set(key, entry)
@@ -157,7 +168,11 @@ export function createIndexes(entries: DexEntry[]): SearchIndexes {
   return { prepared, fuse, enMap, jaMap, roomajiMap, aliasMap }
 }
 
-export function fastSearch(indexes: SearchIndexes, query: string, limit = 20): DexEntry[] {
+export function fastSearch(
+  indexes: SearchIndexes,
+  query: string,
+  limit = 20,
+): DexEntry[] {
   const trimmed = query.trim()
   if (!trimmed) {
     return indexes.prepared
@@ -191,7 +206,11 @@ export function fastSearch(indexes: SearchIndexes, query: string, limit = 20): D
   return ranked.slice(0, limit).map((r) => r.entry)
 }
 
-export function fuzzySearch(indexes: SearchIndexes, query: string, limit = 20): DexEntry[] {
+export function fuzzySearch(
+  indexes: SearchIndexes,
+  query: string,
+  limit = 20,
+): DexEntry[] {
   if (!query.trim()) return []
   return indexes.fuse.search(query, { limit }).map((r) => r.item)
 }
@@ -217,7 +236,10 @@ export function isPasteMode(input: string): boolean {
   return input.length > 30 || /\s/.test(input)
 }
 
-export function detectFromPastedText(indexes: SearchIndexes, text: string): DexEntry[] {
+export function detectFromPastedText(
+  indexes: SearchIndexes,
+  text: string,
+): DexEntry[] {
   const matchedDex = new Set<number>()
   const detected: DexEntry[] = []
 

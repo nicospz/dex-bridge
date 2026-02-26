@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dexData from './data/dex.json'
-import type { DexEntry } from './types'
 import {
   createIndexes,
   detectFromPastedText,
@@ -8,8 +7,10 @@ import {
   fuzzySearch,
   isPasteMode,
 } from './search'
+import type { DexEntry } from './types'
 
 const MAX_RESULTS = 20
+const ENTRIES = dexData as DexEntry[]
 
 const TYPE_COLORS: Record<string, string> = {
   normal: '#A8A77A',
@@ -108,15 +109,22 @@ function withEvolutionChainResults(
 }
 
 export default function App(): JSX.Element {
-  const entries = dexData as DexEntry[]
-  const indexes = useMemo(() => createIndexes(entries), [entries])
-  const entryByDex = useMemo(() => new Map(entries.map((entry) => [entry.dex, entry])), [entries])
+  const indexes = useMemo(() => createIndexes(ENTRIES), [])
+  const entryByDex = useMemo(
+    () => new Map(ENTRIES.map((entry) => [entry.dex, entry])),
+    [],
+  )
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const [query, setQuery] = useState('')
   const [fuzzyEnabled, setFuzzyEnabled] = useState(false)
   const [toast, setToast] = useState(false)
 
   const pasteMode = isPasteMode(query)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   const detected = useMemo(() => {
     if (!pasteMode) return []
@@ -159,12 +167,14 @@ export default function App(): JSX.Element {
         <header className="header">
           <p className="kicker">Instant EN / JA Search</p>
           <h1>DexBridge</h1>
-          <p className="sub">Fast lookup, fuzzy fallback, and multi-detect from pasted text.</p>
+          <p className="sub">
+            Fast lookup, fuzzy fallback, and multi-detect from pasted text.
+          </p>
         </header>
 
         <div className="controls">
           <input
-            autoFocus
+            ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search EN / 日本語 / romaji or paste text"
@@ -181,7 +191,9 @@ export default function App(): JSX.Element {
           </label>
         </div>
 
-        <p className="stats">Showing {results.length} result{results.length === 1 ? '' : 's'}</p>
+        <p className="stats">
+          Showing {results.length} result{results.length === 1 ? '' : 's'}
+        </p>
 
         {pasteMode && detected.length > 0 && (
           <section className="chips-wrap" aria-label="Detected Pokemon">
@@ -219,20 +231,26 @@ export default function App(): JSX.Element {
                       <span className="en">{entry.en}</span>
                       <span className="ja">{entry.ja}</span>
                     </span>
-                    {entry.roomaji && <span className="roomaji">{entry.roomaji}</span>}
-                    {(entry.generation || (entry.types && entry.types.length > 0)) && (
+                    {entry.roomaji && (
+                      <span className="roomaji">{entry.roomaji}</span>
+                    )}
+                    {(entry.generation ||
+                      (entry.types && entry.types.length > 0)) && (
                       <span className="tags-row">
                         {entry.generation && (
-                          <span className="generation">Gen {toRomanNumeral(entry.generation)}</span>
+                          <span className="generation">
+                            Gen {toRomanNumeral(entry.generation)}
+                          </span>
                         )}
                         {entry.types && entry.types.length > 0 && (
-                          <span className="type-pills" aria-label="Pokemon types">
+                          <span className="type-pills">
                             {entry.types.map((type) => (
                               <span
                                 key={`${entry.dex}-${type}`}
                                 className="type-pill"
                                 style={{
-                                  backgroundColor: TYPE_COLORS[type] ?? '#64748b',
+                                  backgroundColor:
+                                    TYPE_COLORS[type] ?? '#64748b',
                                 }}
                               >
                                 {toTypeLabel(type)}
